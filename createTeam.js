@@ -1,4 +1,4 @@
-import { saveTeams } from './setLog.js';
+import { saveTeams, saveWeights } from "./setLog.js";
 
 function shuffle(array = []) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -46,6 +46,46 @@ export function createTeams(array, teamSize) {
   return teams;
 }
 
+export function createTeamsV2(array, weights, teamSize) {
+  let teams = [];
+  let usedMembers = new Set();
+
+  while (usedMembers.size < array.length) {
+    let team = [];
+    let availableMembers = shuffle(
+      array.filter((member) => !usedMembers.has(member))
+    );
+
+    while (team.length < teamSize && availableMembers.length > 0) {
+      availableMembers.sort((a, b) => {
+        let weightA = team.reduce((sum, member) => sum + weights[member][a], 0);
+        let weightB = team.reduce((sum, member) => sum + weights[member][b], 0);
+        return weightA - weightB;
+      });
+
+      let selectedMember = availableMembers.shift();
+      team.push(selectedMember);
+      usedMembers.add(selectedMember);
+    }
+
+    teams.push(team);
+
+    // 가중치 증가
+    team.forEach((member) => {
+      team.forEach((other) => {
+        if (member !== other) {
+          weights[member][other]++;
+        }
+      });
+    });
+  }
+
+  saveTeams(teams);
+  saveWeights(weights);
+
+  return teams;
+}
+
 function getToday() {
   const date = new Date();
   return { month: date.getMonth() + 1, date: date.getDate() };
@@ -57,8 +97,8 @@ export function teamsToString(teams) {
     date + 1
   }일 밥 같이 먹어요 :rice: :party_blob: :cat_feed:`; // UTC 23:30 => KST 08:30 하루 차이가 나서 date + 1
   const teamList = teams
-    .map((team, index) => `**${index + 1}조**    ➡    ${team.join('\t')}`)
-    .join('\n');
+    .map((team, index) => `**${index + 1}조**    ➡    ${team.join("\t")}`)
+    .join("\n");
 
   const message = `${title}\n${teamList}`;
   return message;
